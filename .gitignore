@@ -1,0 +1,8 @@
+.env
+session.json
+
+jiyu_reply_probabilities.json
+test_instapersona.ipynb
+test_mimicbot.ipynb
+test.py
+train_mimicbot.ipynb
