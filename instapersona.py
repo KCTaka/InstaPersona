@@ -49,9 +49,12 @@ def model_response(input_text):
     # Decode and print the response
     prediction = tokenizer.decode(output[0], skip_special_tokens=True)
     
-    # Extract the response from the prediction "### Response:"
-    response = re.search(r"### Response:\n(.+)", prediction, re.DOTALL)
-    return response.group(1).strip()
-    
+    # Extract the response from the prediction using the LAST "### Response:"
+    response_match = re.findall(r"### Response:\n(.+?)(?=\n###|\Z)", prediction, re.DOTALL)
+    if response_match:
+        # Get the last response in the list
+        return response_match[-1].strip()
+    else:
+        return "?"
 
 

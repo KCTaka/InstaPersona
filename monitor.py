@@ -74,19 +74,19 @@ class InstagramMonitor:
             print(f"Error getting username for {user_id}: {e}")
             return f"unknown_user_{user_id}"
 
-    # def format_messages(self, messages, id_to_name):
-    #     """Format messages with error handling"""
-    #     formatted = []
-    #     for msg in messages:
-    #         try:
-    #             # username = self.get_username(msg.user_id)
-    #             full_name = id_to_name.get(msg.user_id, "Unknown")
-    #             user = full_name.split(" ")[0]
-    #             time_ago = self.get_time_ago(msg.timestamp)
-    #             formatted.append(f"<{user}> ({time_ago}): {msg.text}")
-    #         except Exception as e:
-    #             print(f"Error formatting message {msg.id}: {e}")
-    #     return '\n'.join(formatted)
+    def format_messages(self, messages, id_to_name):
+        """Format messages with error handling"""
+        formatted = []
+        for msg in messages:
+            try:
+                # username = self.get_username(msg.user_id)
+                full_name = id_to_name.get(msg.user_id, TARGET_NAME)
+                user = full_name.split(" ")[0]
+                time_ago = self.get_time_ago(msg.timestamp)
+                formatted.append(f"<{user}> ({time_ago}): {msg.text}")
+            except Exception as e:
+                print(f"Error formatting message {msg.id}: {e}")
+        return '\n'.join(formatted)
 
     def monitor_thread(self, thread_id, poll_interval=15):
         """Safer monitoring with increased interval"""
@@ -116,7 +116,7 @@ class InstagramMonitor:
                 time.sleep(60)
         
                 
-    def activate_instapersona(self, thread_id, poll_interval=15):
+    def activate_instapersona(self, thread_id, context_size = 20, poll_interval=15, reply_probability=0.6):
         """Safer monitoring with increased interval"""
         thread = self.client.direct_thread(thread_id)
         id_to_name = {user.pk: user.full_name for user in thread.users}
@@ -128,19 +128,19 @@ class InstagramMonitor:
                     time.sleep(poll_interval)
                     continue
 
-                last_10_messages = thread.messages[-10::-1] if len(thread.messages) >= 10 else thread.messages[::-1]
+                last_10_messages = thread.messages[-context_size:][::-1]
                 latest_message = last_10_messages[-1]
                 
                 if latest_message.id != self.last_message_id:
                     self.last_message_id = latest_message.id
-                    formatted = '\n'.join([f"<{id_to_name.get(msg.user_id, 'Unknown')}> ({self.get_time_ago(msg.timestamp)}): {msg.text}" for msg in last_10_messages])
+                    formatted = self.format_messages(last_10_messages, id_to_name)
                     print('\n' + formatted + '\n')
                     response = model_response(formatted)
                     print(f"Response: {response}")
-                    reply_probability = REPLY_PROBABILITIES[datetime.now().hour]
+                    # reply_probability = REPLY_PROBABILITIES[datetime.now().hour]
                     print(f"Reply probability: {reply_probability}")
                     if random.random() < reply_probability:
-                        self.client.direct_send(response, [thread_id])
+                        self.client.direct_send(response, thread_ids=[thread_id])
                         print(f'Replied successfully with: {response}')
                 
                 time.sleep(poll_interval)
@@ -151,11 +151,11 @@ class InstagramMonitor:
                 time.sleep(60)
 
 from instapersona import model_response
-from setup import IG_USERNAME, IG_PASSWORD, HF_READ_TOKEN, HF_WRITE_TOKEN, TARGET_NAME, MODEL_NAME
+from setup import IG_USERNAME, IG_PASSWORD, TARGET_NAME
 
-import json 
-with open("{TARGET_NAME}_reply_probabilities.json", "r") as file:
-    REPLY_PROBABILITIES = json.load(file)
+# import json 
+# with open(f"{TARGET_NAME}_reply_probabilities.json", "r") as file:
+#     REPLY_PROBABILITIES = json.load(file)
 # reply probabilities include the probability of the response at a hour (0-23) for a given message
 
 # Usage example
